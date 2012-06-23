@@ -59,7 +59,8 @@ class Spine(mpatches.Patch):
         self.set_transform(self.axes.transData) # default transform
 
         self._bounds = None # default bounds
-        self._smart_bounds = False
+        self._bounds_method = False
+        self._smart_bounds = None
 
         # Defer initial position determination. (Not much support for
         # non-rectangular axes is currently implemented, and this lets
@@ -80,7 +81,8 @@ class Spine(mpatches.Patch):
         self._patch_transform = mtransforms.IdentityTransform()
 
     def set_smart_bounds(self,value):
-        """set the spine and associated axis to have smart bounds"""
+        """set the spine and associated axis to have smart bounds (DEPRECATED)"""
+        warnings.warn('set_smart_bounds() is deprecated')
         self._smart_bounds = value
 
         # also set the axis if possible
@@ -417,6 +419,22 @@ class Spine(mpatches.Patch):
     def get_bounds( self ):
         """Get the bounds of the spine."""
         return self._bounds
+
+    def set_bounds_method( self, bounds_method ):
+        """Set the bounds_method of the spine."""
+        assert bounds_method in ['ticks', # limit to drawn ticks (even if data is further)
+                                 'ticks,data','data,ticks', # limit to max(tick,data)
+                                 'data', # limit to data range
+                                 'view', # limit to entire view
+                                 ]
+        if self.spine_type == 'circle':
+            raise ValueError(
+                'set_bounds_method() method incompatible with circular spines')
+        self._bounds_method = bounds_method
+
+    def get_bounds_method( self ):
+        """Get the bounds_method of the spine."""
+        return self._bounds_method
 
     @classmethod
     def linear_spine(cls, axes, spine_type, **kwargs):

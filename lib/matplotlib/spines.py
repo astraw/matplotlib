@@ -176,6 +176,61 @@ class Spine(mpatches.Patch):
         else:
             return False
 
+    def _do_bounds_max_of_ticks_and_data(self,low,high):
+        """set bounds to max(tick, data)"""
+        if low > high:
+            # handle inverted limits
+            low,high=high,low
+
+        viewlim_low = low
+        viewlim_high = high
+
+        del low, high
+
+        if self.spine_type in ('left','right'):
+            datalim_low,datalim_high = self.axes.dataLim.intervaly
+            ticks = self.axes.get_yticks()
+        elif self.spine_type in ('top','bottom'):
+            datalim_low,datalim_high = self.axes.dataLim.intervalx
+            ticks = self.axes.get_xticks()
+        # handle inverted limits
+        ticks = list(ticks)
+        ticks.sort()
+        ticks = np.array(ticks)
+        if datalim_low > datalim_high:
+            datalim_low, datalim_high = datalim_high, datalim_low
+
+        if datalim_low < viewlim_low:
+            # Data extends past view. Clip line to view.
+            low = viewlim_low
+        else:
+            # Data ends before view ends.
+            cond = (ticks <= datalim_low) & (ticks >= viewlim_low)
+            tickvals = ticks[cond]
+            if len(tickvals):
+                # A tick is less than or equal to lowest data point.
+                low = tickvals[-1]
+            else:
+                # No tick is available
+                low = datalim_low
+            low = max(low,viewlim_low)
+
+        if datalim_high > viewlim_high:
+            # Data extends past view. Clip line to view.
+            high = viewlim_high
+        else:
+            # Data ends before view ends.
+            cond = (ticks >= datalim_high) & (ticks <= viewlim_high)
+            tickvals = ticks[cond]
+            if len(tickvals):
+                # A tick is greater than or equal to highest data point.
+                high = tickvals[0]
+            else:
+                # No tick is available
+                high = datalim_high
+            high = min(high,viewlim_high)
+        return low, high
+
     def _adjust_location(self):
         """automatically set spine bounds to the view interval"""
 
@@ -191,59 +246,7 @@ class Spine(mpatches.Patch):
                 raise ValueError('unknown spine spine_type: %s'%self.spine_type)
 
             if self._smart_bounds:
-                # attempt to set bounds in sophisticated way
-                if low > high:
-                    # handle inverted limits
-                    low,high=high,low
-
-                viewlim_low = low
-                viewlim_high = high
-
-                del low, high
-
-                if self.spine_type in ('left','right'):
-                    datalim_low,datalim_high = self.axes.dataLim.intervaly
-                    ticks = self.axes.get_yticks()
-                elif self.spine_type in ('top','bottom'):
-                    datalim_low,datalim_high = self.axes.dataLim.intervalx
-                    ticks = self.axes.get_xticks()
-                # handle inverted limits
-                ticks = list(ticks)
-                ticks.sort()
-                ticks = np.array(ticks)
-                if datalim_low > datalim_high:
-                    datalim_low, datalim_high = datalim_high, datalim_low
-
-                if datalim_low < viewlim_low:
-                    # Data extends past view. Clip line to view.
-                    low = viewlim_low
-                else:
-                    # Data ends before view ends.
-                    cond = (ticks <= datalim_low) & (ticks >= viewlim_low)
-                    tickvals = ticks[cond]
-                    if len(tickvals):
-                        # A tick is less than or equal to lowest data point.
-                        low = tickvals[-1]
-                    else:
-                        # No tick is available
-                        low = datalim_low
-                    low = max(low,viewlim_low)
-
-                if datalim_high > viewlim_high:
-                    # Data extends past view. Clip line to view.
-                    high = viewlim_high
-                else:
-                    # Data ends before view ends.
-                    cond = (ticks >= datalim_high) & (ticks <= viewlim_high)
-                    tickvals = ticks[cond]
-                    if len(tickvals):
-                        # A tick is greater than or equal to highest data point.
-                        high = tickvals[0]
-                    else:
-                        # No tick is available
-                        high = datalim_high
-                    high = min(high,viewlim_high)
-
+                low,high = self._do_bounds_max_of_ticks_and_data(low,high)
         else:
             low,high = self._bounds
 
